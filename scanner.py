@@ -1,5 +1,6 @@
 import discord
 from discord.ext import tasks, commands
+from keep_alive import keep_alive
 import asyncpraw
 from dotenv import load_dotenv
 import asyncio
@@ -201,4 +202,5 @@ async def main():
 
 # Run the async main function
 if __name__ == "__main__":
+    keep_alive()
     asyncio.run(main())
