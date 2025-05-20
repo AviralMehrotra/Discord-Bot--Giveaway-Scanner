@@ -154,26 +154,31 @@ async def check_reddit():
 
             for sub in subreddits:
                 try:
-                    subreddit = await reddit.subreddit(sub)
-                    async for post in subreddit.new(limit=25):
-                        if post.created_utc < one_hour_ago:
-                            continue
-                            
-                        if post.id not in seen_posts:
-                            title = post.title.lower()
-                            if any(k in title for k in keywords):
-                                seen_posts.append(post.id)
-                                message = (
-                                    f"🎁 **Giveaway Found!**\n"
-                                    f"**Title:** {post.title}\n"
-                                    f"**Link:** {post.url}\n"
-                                    f"**Posted:** {datetime.fromtimestamp(post.created_utc).strftime('%Y-%m-%d %H:%M:%S UTC')}\n"
-                                    f"**Time Ago:** {int((current_time.timestamp() - post.created_utc) / 60)} minutes ago"
-                                )
-                                await channel.send(message)
-                                logger.info(f"Posted giveaway from r/{sub}: {post.title}")
+                    async with asyncio.timeout(30):  # 30 second timeout for each subreddit
+                        subreddit = await reddit.subreddit(sub)
+                        async for post in subreddit.new(limit=25):
+                            if post.created_utc < one_hour_ago:
+                                continue
+                                
+                            if post.id not in seen_posts:
+                                title = post.title.lower()
+                                if any(k in title for k in keywords):
+                                    seen_posts.append(post.id)
+                                    message = (
+                                        f"🎁 **Giveaway Found!**\n"
+                                        f"**Title:** {post.title}\n"
+                                        f"**Link:** {post.url}\n"
+                                        f"**Posted:** {datetime.fromtimestamp(post.created_utc).strftime('%Y-%m-%d %H:%M:%S UTC')}\n"
+                                        f"**Time Ago:** {int((current_time.timestamp() - post.created_utc) / 60)} minutes ago"
+                                    )
+                                    await channel.send(message)
+                                    logger.info(f"Posted giveaway from r/{sub}: {post.title}")
                     
+                    # Add delay between subreddit checks to respect rate limits
                     await asyncio.sleep(2)
+                except asyncio.TimeoutError:
+                    logger.error(f"Timeout while processing subreddit {sub}")
+                    continue
                 except Exception as e:
                     logger.error(f"Error processing subreddit {sub}: {str(e)}")
                     continue
